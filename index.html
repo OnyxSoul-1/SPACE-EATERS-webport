@@ -9,9 +9,9 @@
 <style>
     html, body {
         padding: 0; margin: 0; overflow: hidden;
-        background: #000000; /* Pure black */
+        background: #000000;
         color: #ffffff;
-        font-family: 'Courier New', Courier, monospace; /* Clean, no-color tech font */
+        font-family: 'Courier New', Courier, monospace;
         height: 100%;
         -webkit-touch-callout: none;
         -webkit-user-select: none;
@@ -22,7 +22,6 @@
     #unity-container { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
     #unity-canvas { width: 100%; height: 100%; background: #000; display: none; }
 
-    /* Custom Loading Screen */
     #custom-loader {
         position: absolute;
         top: 0; left: 0; width: 100%; height: 100%;
@@ -35,7 +34,6 @@
         transition: opacity 0.3s ease-out;
     }
 
-    /* Small title at the top */
     .title {
         position: absolute;
         top: 20px;
@@ -45,16 +43,22 @@
         text-transform: uppercase;
     }
 
-    /* Your name at the bottom */
+    /* RAINBOW CREDIT */
     .credit {
         position: absolute;
         bottom: 20px;
         font-size: 12px;
-        color: #555555;
         letter-spacing: 1px;
+        background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8f00ff, #ff0000);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: rainbow 3s linear infinite;
+        font-weight: bold;
     }
 
-    /* Loading Box */
+    @keyframes rainbow { to { background-position: 200% center; } }
+
     .loading-box {
         display: flex;
         flex-direction: column;
@@ -67,7 +71,7 @@
         color: #aaaaaa;
         margin-bottom: 15px;
         text-align: center;
-        height: 15px; /* Prevents jumping text */
+        height: 15px;
     }
 
     .progress-container {
@@ -79,14 +83,13 @@
     #progress-bar {
         height: 100%;
         width: 0%;
-        background: #ffffff; /* White progress bar */
+        background: #ffffff;
         transition: width 0.1s linear;
     }
 </style>
 </head>
 <body class="dark">
 
-<!-- Custom Loading Screen -->
 <div id="custom-loader">
     <div class="title">SPACE EATERS</div>
     
@@ -100,7 +103,6 @@
     <div class="credit">Port by Onyx$oul-1</div>
 </div>
 
-<!-- Unity Container -->
 <div id="unity-container" class="unity-desktop">
     <canvas id="unity-canvas" tabindex="-1"></canvas>
 </div>
@@ -140,7 +142,6 @@
         }
     });
 
-    // File Merging with Clear Text Updates
     async function fetchAndMergeChunks(partUrls, label) {
         let buffers = [];
         for (let i = 0; i < partUrls.length; i++) {
@@ -158,14 +159,12 @@
     script.onload = () => {
         StartUnityInstance = async function () {
             try {
-                // Download and Merge Data Parts
                 const mergedDataUrl = await fetchAndMergeChunks([
                     buildUrl + "relise.data.br.part1", 
                     buildUrl + "relise.data.br.part2",
                     buildUrl + "relise.data.br.part3"
                 ], "data");
 
-                // Download and Merge Wasm Parts
                 const mergedCodeUrl = await fetchAndMergeChunks([
                     buildUrl + "relise.wasm.br.part1", 
                     buildUrl + "relise.wasm.br.part2"
@@ -184,14 +183,12 @@
                 };
 
                 createUnityInstance(canvas, config, (progress) => {
-                    // Update the custom progress bar
                     const percent = Math.round(progress * 100);
                     statusText.innerText = `Loading... ${percent}%`;
                     progressBar.style.width = `${percent}%`;
                 }).then((unityInstance) => {
                     ygGameInstance = unityInstance;
                     
-                    // Hide loader and show canvas
                     loaderUI.style.opacity = '0';
                     setTimeout(() => {
                         loaderUI.style.display = 'none';
@@ -234,14 +231,12 @@
     }
     function LogStyledMessage(message) { console.log('%c' + message, 'color: #FFDF73; background-color: #454545'); }
 
-    // --- YANDEX SDK LOGIC ---
     InitYSDK();
     async function InitYSDK() {
         try {
             if (IsLocalHost()) return;
             ysdk = await YaGames.init();
             
-            // FORCE ENGLISH
             try {
                 if (ysdk.environment && ysdk.environment.i18n) {
                     ysdk.environment.i18n.lang = "en";
