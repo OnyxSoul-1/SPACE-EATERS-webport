@@ -2,53 +2,118 @@
 <html lang="en-us">
 <head>
 <meta charset="utf-8"/>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
 <link rel="stylesheet" href="./style.css"/>
 <!-- Official Yandex SDK link -->
 <script src="https://yandex.ru/games/sdk/v2"></script>
 <style>
-    canvas:focus { outline: none; }
     html, body {
         padding: 0; margin: 0; overflow: hidden;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        -webkit-tap-highlight-color: rgba(0,0,0,0); height: 100%;
+        background: #000000; /* Pure black */
+        color: #ffffff;
+        font-family: 'Courier New', Courier, monospace; /* Clean, no-color tech font */
+        height: 100%;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    
+    canvas:focus { outline: none; }
+    #unity-container { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+    #unity-canvas { width: 100%; height: 100%; background: #000; display: none; }
+
+    /* Custom Loading Screen */
+    #custom-loader {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: #000000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        transition: opacity 0.3s ease-out;
+    }
+
+    /* Small title at the top */
+    .title {
+        position: absolute;
+        top: 20px;
+        font-size: 14px;
+        letter-spacing: 4px;
+        color: #888888;
+        text-transform: uppercase;
+    }
+
+    /* Your name at the bottom */
+    .credit {
+        position: absolute;
+        bottom: 20px;
+        font-size: 12px;
+        color: #555555;
+        letter-spacing: 1px;
+    }
+
+    /* Loading Box */
+    .loading-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 300px;
+    }
+
+    #status-text {
+        font-size: 12px;
+        color: #aaaaaa;
+        margin-bottom: 15px;
+        text-align: center;
+        height: 15px; /* Prevents jumping text */
+    }
+
+    .progress-container {
+        width: 100%;
+        height: 2px;
+        background: #222222;
+    }
+
+    #progress-bar {
+        height: 100%;
+        width: 0%;
+        background: #ffffff; /* White progress bar */
+        transition: width 0.1s linear;
     }
 </style>
 </head>
 <body class="dark">
+
+<!-- Custom Loading Screen -->
+<div id="custom-loader">
+    <div class="title">SPACE EATERS</div>
+    
+    <div class="loading-box">
+        <div id="status-text">Initializing systems...</div>
+        <div class="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+    </div>
+
+    <div class="credit">Port by Onyx$oul-1</div>
+</div>
+
+<!-- Unity Container -->
 <div id="unity-container" class="unity-desktop">
     <canvas id="unity-canvas" tabindex="-1"></canvas>
-</div>
-<div id="loading-cover" style="display:none;">
-    <div id="unity-loading-bar">
-        <div id="unity-progress-bar-empty" style="display: none;">
-            <div id="unity-progress-bar-full"></div>
-        </div>
-        <div class="spinner"></div>
-    </div>
 </div>
 
 <script>
     const hideFullScreenButton = "";
-    
-    // Your files are in the root folder, so we use "./" instead of "Build/"
     const buildUrl = "./";
     const loaderUrl = buildUrl + "relise.loader.js";
 
-    const container = document.querySelector("#unity-container");
     const canvas = document.querySelector("#unity-canvas");
-    const loadingCover = document.querySelector("#loading-cover");
-    const progressBarEmpty = document.querySelector("#unity-progress-bar-empty");
-    const progressBarFull = document.querySelector("#unity-progress-bar-full");
-    const spinner = document.querySelector('.spinner');
-
-    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        container.className = "unity-mobile";
-    }
-    loadingCover.style.display = "";
+    const loaderUI = document.querySelector("#custom-loader");
+    const progressBar = document.querySelector("#progress-bar");
+    const statusText = document.querySelector("#status-text");
 
     let StartUnityInstance;
     let ygGameInstance = null;
@@ -60,8 +125,8 @@
 
     document.addEventListener('contextmenu', event => event.preventDefault());
     function FocusGame() { window.focus(); canvas.focus(); }
-    window.addEventListener('pointerdown', () => { FocusGame(); });
-    window.addEventListener('touchstart', () => { FocusGame(); });
+    window.addEventListener('pointerdown', () => FocusGame());
+    window.addEventListener('touchstart', () => FocusGame());
 
     document.addEventListener('visibilitychange', function () {
         if (ysdk !== null && initGame == true) {
@@ -75,13 +140,16 @@
         }
     });
 
-    // FUNCTION TO MERGE YOUR SPLIT FILES
-    async function fetchAndMergeChunks(partUrls) {
-        const responses = await Promise.all(partUrls.map(url => fetch(url)));
-        for (let i = 0; i < responses.length; i++) {
-            if (!responses[i].ok) throw new Error("Could not load file part: " + partUrls[i]);
+    // File Merging with Clear Text Updates
+    async function fetchAndMergeChunks(partUrls, label) {
+        let buffers = [];
+        for (let i = 0; i < partUrls.length; i++) {
+            statusText.innerText = `Downloading ${label} [${i + 1}/${partUrls.length}]...`;
+            const response = await fetch(partUrls[i]);
+            if (!response.ok) throw new Error("Could not load file: " + partUrls[i]);
+            buffers.push(await response.arrayBuffer());
         }
-        const buffers = await Promise.all(responses.map(res => res.arrayBuffer()));
+        statusText.innerText = `Merging ${label}...`;
         return URL.createObjectURL(new Blob(buffers, { type: 'application/octet-stream' }));
     }
 
@@ -90,18 +158,20 @@
     script.onload = () => {
         StartUnityInstance = async function () {
             try {
-                // Merge the 3 data parts
+                // Download and Merge Data Parts
                 const mergedDataUrl = await fetchAndMergeChunks([
                     buildUrl + "relise.data.br.part1", 
                     buildUrl + "relise.data.br.part2",
                     buildUrl + "relise.data.br.part3"
-                ]);
-                
-                // Merge the 2 wasm parts
+                ], "data");
+
+                // Download and Merge Wasm Parts
                 const mergedCodeUrl = await fetchAndMergeChunks([
                     buildUrl + "relise.wasm.br.part1", 
                     buildUrl + "relise.wasm.br.part2"
-                ]);
+                ], "wasm");
+
+                statusText.innerText = "Starting Unity Engine...";
 
                 const config = {
                     dataUrl: mergedDataUrl,
@@ -114,18 +184,27 @@
                 };
 
                 createUnityInstance(canvas, config, (progress) => {
-                    spinner.style.display = "none";
-                    progressBarEmpty.style.display = "";
-                    const adjustedProgress = Math.max(progress, 0.05);
-                    progressBarFull.style.width = `${100 * adjustedProgress}%`;
+                    // Update the custom progress bar
+                    const percent = Math.round(progress * 100);
+                    statusText.innerText = `Loading... ${percent}%`;
+                    progressBar.style.width = `${percent}%`;
                 }).then((unityInstance) => {
                     ygGameInstance = unityInstance;
-                    loadingCover.style.display = "none";
+                    
+                    // Hide loader and show canvas
+                    loaderUI.style.opacity = '0';
+                    setTimeout(() => {
+                        loaderUI.style.display = 'none';
+                        canvas.style.display = 'block';
+                    }, 300);
+                    
                 }).catch((message) => {
+                    statusText.innerText = "Error: " + message;
                     console.error(message);
                 });
 
             } catch (err) {
+                statusText.innerText = "Failed to load game files.";
                 console.error("File Merge Error: ", err);
             }
         };
@@ -134,7 +213,7 @@
     };
 
     function StartUnityInstance_IfUnloaded() {
-        if (spinner.style.display !== "none") StartUnityInstance();
+        if (loaderUI.style.display !== "none") StartUnityInstance();
     }
 
     function IsLocalHost() {
@@ -155,6 +234,7 @@
     }
     function LogStyledMessage(message) { console.log('%c' + message, 'color: #FFDF73; background-color: #454545'); }
 
+    // --- YANDEX SDK LOGIC ---
     InitYSDK();
     async function InitYSDK() {
         try {
